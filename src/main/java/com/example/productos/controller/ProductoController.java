@@ -6,6 +6,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
+
 
 @RestController
 @RequestMapping("/api/v1/productos")
@@ -26,11 +30,14 @@ public class ProductoController {
     }
 
     @GetMapping("/{id}")
-    public Mono<Producto> obtener(@PathVariable String id) {
-        return productoService.obtenerProductoPorId(id);
+    public Mono<ResponseEntity<Producto>> obtener(@PathVariable String id) {
+        return productoService.obtenerProductoPorId(id)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public Mono<Producto> crear(@RequestBody Producto producto) {
         return productoService.crearProducto(producto);
     }
@@ -41,6 +48,7 @@ public class ProductoController {
     }
 
     @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> eliminar(@PathVariable String id) {
         return productoService.eliminarProducto(id);
     }

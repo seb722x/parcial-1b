@@ -4,105 +4,144 @@ import com.example.productos.model.Producto;
 import com.example.productos.repository.ProductoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 public class ProductoServiceTest {
 
-    private ProductoService productoService;
+    @Mock
     private ProductoRepository productoRepository;
+
+    @InjectMocks
+    private ProductoService productoService;
 
     @BeforeEach
     void setUp() {
-        productoRepository = mock(ProductoRepository.class);
-        productoService = new ProductoService(productoRepository);
-        System.out.println("🔧 Setup completo para los tests");
+        MockitoAnnotations.openMocks(this);
+        System.out.println("\n🔧 Setup completo para pruebas unitarias con Mockito\n");
     }
 
     @Test
-    void crearProducto_debeRetornarProductoGuardadoConId() {
-        System.out.println("\n🔍 Iniciando test: crearProducto_debeRetornarProductoGuardadoConId");
+    void listarProductos_debeRetornarLista() {
+        System.out.println("▶️ Iniciando prueba: listarProductos_debeRetornarLista");
 
-        Producto productoSinId = new Producto();
-        productoSinId.setNombre("Mouse");
-        productoSinId.setPrecio(49.99);
+        Producto producto1 = Producto.builder().id("1").nombre("Teclado").precio(50.0).build();
+        Producto producto2 = Producto.builder().id("2").nombre("Mouse").precio(30.0).build();
 
-        Producto productoConId = new Producto();
-        productoConId.setId("123abc");
-        productoConId.setNombre("Mouse");
-        productoConId.setPrecio(49.99);
+        when(productoRepository.findAll()).thenReturn(Flux.just(producto1, producto2));
 
-        when(productoRepository.save(productoSinId)).thenReturn(Mono.just(productoConId));
-
-        StepVerifier.create(productoService.crearProducto(productoSinId))
-                .expectNextMatches(p -> {
-                    boolean result = p.getId() != null &&
-                            p.getNombre().equals("Mouse") &&
-                            p.getPrecio() == 49.99;
-                    if (!result) {
-                        System.err.println("❌ El test falló: los datos del producto no son los esperados.");
-                        System.err.println("   ID: " + p.getId());
-                        System.err.println("   Nombre: " + p.getNombre());
-                        System.err.println("   Precio: " + p.getPrecio());
-                    } else {
-                        System.out.println("✅ Producto guardado correctamente:");
-                        System.out.println("   ID: " + p.getId());
-                        System.out.println("   Nombre: " + p.getNombre());
-                        System.out.println("   Precio: " + p.getPrecio());
-                    }
-                    return result;
+        StepVerifier.create(productoService.listarProductos())
+                .assertNext(p -> {
+                    System.out.println("🟢 Producto recibido: " + p);
+                    assertEquals("1", p.getId());
+                    assertEquals("Teclado", p.getNombre());
+                    assertEquals(50.0, p.getPrecio());
+                })
+                .assertNext(p -> {
+                    System.out.println("🟢 Producto recibido: " + p);
+                    assertEquals("2", p.getId());
+                    assertEquals("Mouse", p.getNombre());
+                    assertEquals(30.0, p.getPrecio());
                 })
                 .verifyComplete();
 
-        verify(productoRepository, times(1)).save(productoSinId);
-        System.out.println("✅ Test crearProducto_debeRetornarProductoGuardadoConId pasó correctamente 🎉");
+        verify(productoRepository, times(1)).findAll();
+
+        System.out.println("✅ Prueba finalizada: listarProductos_debeRetornarLista\n");
     }
 
     @Test
-    void actualizarProducto_debeRetornarProductoActualizado() {
-        System.out.println("\n🔍 Iniciando test: actualizarProducto_debeRetornarProductoActualizado");
+    void obtenerProductoPorId_debeRetornarProducto() {
+        System.out.println("▶️ Iniciando prueba: obtenerProductoPorId_debeRetornarProducto");
 
-        String productoId = "123";
-        Producto productoExistente = new Producto();
-        productoExistente.setId(productoId);
-        productoExistente.setNombre("Teclado");
-        productoExistente.setPrecio(30.00);
+        Producto producto = Producto.builder().id("123").nombre("Pantalla").precio(200.0).build();
 
-        Producto productoActualizado = new Producto();
-        productoActualizado.setNombre("Teclado Mecánico");
-        productoActualizado.setPrecio(60.00);
+        when(productoRepository.findById("123")).thenReturn(Mono.just(producto));
 
-        Producto resultadoEsperado = new Producto();
-        resultadoEsperado.setId(productoId);
-        resultadoEsperado.setNombre("Teclado Mecánico");
-        resultadoEsperado.setPrecio(60.00);
-
-        when(productoRepository.findById(productoId)).thenReturn(Mono.just(productoExistente));
-        when(productoRepository.save(any(Producto.class))).thenReturn(Mono.just(resultadoEsperado));
-
-        StepVerifier.create(productoService.actualizarProducto(productoId, productoActualizado))
-                .expectNextMatches(p -> {
-                    boolean result = p.getNombre().equals("Teclado Mecánico") &&
-                            p.getPrecio() == 60.00;
-                    if (!result) {
-                        System.err.println("❌ El test falló: producto no se actualizó como se esperaba.");
-                        System.err.println("   Nombre: " + p.getNombre());
-                        System.err.println("   Precio: " + p.getPrecio());
-                    } else {
-                        System.out.println("✅ Producto actualizado correctamente:");
-                        System.out.println("   ID: " + p.getId());
-                        System.out.println("   Nombre: " + p.getNombre());
-                        System.out.println("   Precio: " + p.getPrecio());
-                    }
-                    return result;
+        StepVerifier.create(productoService.obtenerProductoPorId("123"))
+                .assertNext(p -> {
+                    System.out.println("🟢 Producto encontrado: " + p);
+                    assertEquals("123", p.getId());
+                    assertEquals("Pantalla", p.getNombre());
+                    assertEquals(200.0, p.getPrecio());
                 })
                 .verifyComplete();
 
-        verify(productoRepository).findById(productoId);
+        verify(productoRepository).findById("123");
+
+        System.out.println("✅ Prueba finalizada: obtenerProductoPorId_debeRetornarProducto\n");
+    }
+
+    @Test
+    void crearProducto_debeGuardarYRetornarProducto() {
+        System.out.println("▶️ Iniciando prueba: crearProducto_debeGuardarYRetornarProducto");
+
+        Producto producto = Producto.builder().id("321").nombre("Auriculares").precio(75.0).build();
+
+        when(productoRepository.save(producto)).thenReturn(Mono.just(producto));
+
+        StepVerifier.create(productoService.crearProducto(producto))
+                .assertNext(p -> {
+                    System.out.println("🟢 Producto guardado: " + p);
+                    assertEquals("321", p.getId());
+                    assertEquals("Auriculares", p.getNombre());
+                    assertEquals(75.0, p.getPrecio());
+                })
+                .verifyComplete();
+
+        verify(productoRepository).save(producto);
+
+        System.out.println("✅ Prueba finalizada: crearProducto_debeGuardarYRetornarProducto\n");
+    }
+
+    @Test
+    void actualizarProducto_debeModificarYRetornarActualizado() {
+        System.out.println("▶️ Iniciando prueba: actualizarProducto_debeModificarYRetornarActualizado");
+
+        String id = "999";
+        Producto original = Producto.builder().id(id).nombre("Tablet").precio(300.0).build();
+        Producto actualizado = Producto.builder().id(id).nombre("Tablet Pro").precio(450.0).build();
+
+        when(productoRepository.findById(id)).thenReturn(Mono.just(original));
+        when(productoRepository.save(any(Producto.class))).thenReturn(Mono.just(actualizado));
+
+        StepVerifier.create(productoService.actualizarProducto(id, actualizado))
+                .assertNext(p -> {
+                    System.out.println("🟢 Producto actualizado: " + p);
+                    assertEquals("Tablet Pro", p.getNombre());
+                    assertEquals(450.0, p.getPrecio());
+                })
+                .verifyComplete();
+
+        verify(productoRepository).findById(id);
         verify(productoRepository).save(any(Producto.class));
-        System.out.println("✅ Test actualizarProducto_debeRetornarProductoActualizado pasó correctamente 🎉");
+
+        System.out.println("✅ Prueba finalizada: actualizarProducto_debeModificarYRetornarActualizado\n");
+    }
+
+    @Test
+    void eliminarProducto_debeEliminarYCompletar() {
+        System.out.println("▶️ Iniciando prueba: eliminarProducto_debeEliminarYCompletar");
+
+        String id = "777";
+
+        when(productoRepository.deleteById(id)).thenReturn(Mono.empty());
+
+        StepVerifier.create(productoService.eliminarProducto(id))
+                .verifyComplete();
+
+        verify(productoRepository).deleteById(id);
+
+        System.out.println("🟢 Producto con ID eliminado: " + id);
+        System.out.println("✅ Prueba finalizada: eliminarProducto_debeEliminarYCompletar\n");
     }
 }
+
 
